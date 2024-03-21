@@ -12,13 +12,28 @@
 #include <TridentTD_LineNotify.h>
 #include <time.h>
 
+#define BLYNK_TEMPLATE_ID "TMPL6xxkVMf-X"
+#define BLYNK_TEMPLATE_NAME "westManagement"
+
+#include <BlynkSimpleEsp32.h>
+
 const int trigPin = 5;
 const int echoPin = 18;
 const char *ssid = "IOT Engineering";
 const char *password = "coeai123";
 const char *thingSpeakAPIKey = "33M4MAGT4QFPOB9O";
 
+
+
 #define LINE_TOKEN  "NOFWj20LipsqkrFwlI8o7HpudXo8i9GQkGBAMIT4xvX"   // TOKEN
+
+/* Comment this out to disable prints and save space */
+#define BLYNK_PRINT Serial
+
+/* Fill in information from Blynk Device Info here */
+#define BLYNK_TEMPLATE_ID "TMPL6xxkVMf-X"
+#define BLYNK_TEMPLATE_NAME "westManagement"
+#define BLYNK_AUTH_TOKEN "scnfqBmKj7UFBTZ3F2sz0C_kRyc6Q3Hi"
 
 //define sound speed in cm/uS
 #define SOUND_SPEED 0.034
@@ -27,9 +42,13 @@ const char *thingSpeakAPIKey = "33M4MAGT4QFPOB9O";
 long duration;
 float distanceCm;
 float distanceInch;
+int i = 1;
+int send = 1;
+
 
 void setup() {
   Serial.begin(115200); // Starts the serial communication
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, password);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
@@ -38,9 +57,11 @@ void setup() {
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT); // Sets the echoPin as an Input
   LINE.setToken(LINE_TOKEN);
+  
 }
 
 void loop() {
+  Blynk.run();
   // Clears the trigPin
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -64,31 +85,22 @@ void loop() {
   Serial.print("Distance (inch): ");
   Serial.println(distanceInch);
 
-  sendToThingSpeak(distanceCm, distanceInch);
+   Blynk.virtualWrite(V1, distanceCm); 
   
-  if(distanceCm >= 5){
+  if(distanceCm <= 5 && send == 1){
     sendToLine(distanceCm, distanceInch);
+    send = 0;
   }
 
-
-  delay(15000);
-}
-
-void sendToThingSpeak(float distanceCm, float distanceInch) {
-  WiFiClient client;
-  const char *server = "api.thingspeak.com";
-  String data = "GET /update?api_key=" + String(thingSpeakAPIKey);
-  data += "&field1=" + String(distanceCm);
-  data += "&field2=" + String(distanceInch);
-  data += "\r\n";
-  if (client.connect(server, 80)) {
-    client.print(data);
-    client.stop();
-    Serial.println("Data sent to ThingSpeak!");
-  } else {
-    Serial.println("Failed to connect to ThingSpeak server!");
+  if(i >= 15000){
+    send = 1;
+    i = 0;
   }
+
+  i += 3000;
+  delay(3000);
 }
+
 
 void sendToLine(float distanceCm, float distanceInch){
 
@@ -96,4 +108,3 @@ void sendToLine(float distanceCm, float distanceInch){
   LINE.notify("ระดับควาสูงนิ้ว:" + String(distanceInch));
 
 }
-
